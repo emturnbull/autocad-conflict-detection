@@ -22,6 +22,7 @@
 """
 import arcpy
 import sys
+import csv
 
 # Dataset 
 # Spatial Reference
@@ -131,6 +132,28 @@ with arcpy.da.SearchCursor(conflict_feature_class, ['OBJECTID', 'SHAPE@', entity
             conflicting_features.append((row[0], row[2], conflicts))
             
 print(conflicting_features)
+arcpy.env.overwriteOutput = True
+print(outputLocation)
+for row in conflicting_features:
+  print(row[2])
+outputFile = "Conflicts"
+outputLocation = geodatabase + "\\" + outputFile
+print(outputFile)
+arcpy.CreateTable_management(geodatabase,outputFile)
+fields = ['RLine_OID', 'RLine_H', \
+                 'FClass','OID','Con_Handle', \
+                 'Con_Type','Distance_m']
+for field in fields:
+    arcpy.AddField_management(outputFile, field, "TEXT")
+outputFile = open('output.csv',"w")
+writer = csv.writer(outputFile, delimiter=',', quotechar='"', quoting=csv.QUOTE_ALL)
+writer.writerow(fields)
+with arcpy.da.InsertCursor(outputLocation, fields) as cursor:
+    for row in conflicting_features:
+       for item in row[2]:
+           rowOutput = [row[0],row[1],item[0],item[1],item[2],item[3],item[4]]
+           cursor.insertRow(rowOutput)
+           writer.writerow(rowOutput)
 
 """ Conflict Table
 - Running Line Handle (whatever handle is)
