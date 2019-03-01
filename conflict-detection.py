@@ -23,6 +23,7 @@
 import arcpy
 import sys
 import os
+import csv
 
 # Dataset 
 # Spatial Reference
@@ -99,6 +100,7 @@ if testing:
     results_feature_class = 'Conflicting_Features'
 else:
     geodatabase = sys.argv[1]
+	results_geodatabase = sys.argv[2]
     dataset = os.path.basename(sys.argv[5])
     threshold_table = sys.argv[10]
     layer_field = sys.argv[6]
@@ -111,8 +113,10 @@ else:
     threshold_units = sys.argv[13]
     conflict_feature_class = sys.argv[3]
     conflict_feature_layer = sys.argv[4]
-    use_all_features = sys.argv[18]
-    find_all_conflicts = sys.argv[17]
+	results_featureset = sys.argv[16]
+	results_csv_file = sys.argv[17]
+    use_all_features = sys.argv[19]
+    find_all_conflicts = sys.argv[18]
     results_table_name =sys.argv[15]
 
 RELEVANT_SHAPE_TYPES = ['point', 'polyline', 'polygon', 'multipatch']
@@ -191,36 +195,25 @@ with arcpy.da.SearchCursor(conflict_feature_class, ['OBJECTID', 'SHAPE@', entity
             message("No conflicts found")
             
 message(conflicting_features)
-
-""" Conflict Table
-- Running Line Handle (whatever handle is)
-- Conflict Layer Name (whatever layer is)
-- Conflict Handle (whatever handle is)
-- Conflict Feature Class (string)
-- Distance (float)
-fields = arcpy.ListFields(parameters[0].valueAsText)
-		for field in fields:
-			if field.name == parameters[3].valueAsText:
-costFieldType = [field.type, field.length]
-"""
-        
-
-
-
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
+arcpy.env.overwriteOutput = True
+message("Writing output to {}".format(output
+for row in conflicting_features:
+  print(row[2])
+outputFile = "Conflicts"
+outputLocation = geodatabase + "\\" + outputFile
+print(outputFile)
+arcpy.CreateTable_management(geodatabase,outputFile)
+fields = ['RLine_OID', 'RLine_H', \
+                 'FClass','OID','Con_Handle', \
+                 'Con_Type','Distance_m']
+for field in fields:
+    arcpy.AddField_management(outputFile, field, "TEXT")
+outputFile = open('output.csv',"w")
+writer = csv.writer(outputFile, delimiter=',', quotechar='"', quoting=csv.QUOTE_ALL)
+writer.writerow(fields)
+with arcpy.da.InsertCursor(outputLocation, fields) as cursor:
+    for row in conflicting_features:
+       for item in row[2]:
+           rowOutput = [row[0],row[1],item[0],item[1],item[2],item[3],item[4]]
+           cursor.insertRow(rowOutput)
+           writer.writerow(rowOutput)
