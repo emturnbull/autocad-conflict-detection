@@ -208,7 +208,7 @@ fields = [
 if results_csv_file:
     message("Writing output to CSV file {}".format(results_csv_file))
     with open(results_csv_file, 'w') as outputFile:
-        writer = csv.writer(outputFile, delimiter=',', quotechar='"', quoting=csv.QUOTE_ALL)
+        writer = csv.writer(outputFile, delimiter=',', quotechar='"', quoting=csv.QUOTE_ALL, lineterminator='\n')
         writer.writerow(fields)
         for row in conflicting_features:
             for item in row[2]:
