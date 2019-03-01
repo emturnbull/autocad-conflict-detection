@@ -196,24 +196,33 @@ with arcpy.da.SearchCursor(conflict_feature_class, ['OBJECTID', 'SHAPE@', entity
             
 message(conflicting_features)
 arcpy.env.overwriteOutput = True
-message("Writing output to {}".format(output
-for row in conflicting_features:
-  print(row[2])
-outputFile = "Conflicts"
-outputLocation = geodatabase + "\\" + outputFile
-print(outputFile)
-arcpy.CreateTable_management(geodatabase,outputFile)
-fields = ['RLine_OID', 'RLine_H', \
-                 'FClass','OID','Con_Handle', \
-                 'Con_Type','Distance_m']
-for field in fields:
-    arcpy.AddField_management(outputFile, field, "TEXT")
-outputFile = open('output.csv',"w")
-writer = csv.writer(outputFile, delimiter=',', quotechar='"', quoting=csv.QUOTE_ALL)
-writer.writerow(fields)
-with arcpy.da.InsertCursor(outputLocation, fields) as cursor:
-    for row in conflicting_features:
-       for item in row[2]:
-           rowOutput = [row[0],row[1],item[0],item[1],item[2],item[3],item[4]]
-           cursor.insertRow(rowOutput)
-           writer.writerow(rowOutput)
+fields = [
+	'Interest_OID', 
+	'Interest_Handle',
+    'Conflict_Class',
+	'Conflict_OID',
+	'Conflict_Handle',
+	'Conflict_Layer',
+	'Conflict_Distance'
+]
+if results_csv_file:
+	message("Writing output to CSV file {}".format(results_csv_file))
+	with open(results_csv_file, 'w') as outputFile:
+		writer = csv.writer(outputFile, delimiter=',', quotechar='"', quoting=csv.QUOTE_ALL)
+		writer.write(
+		for row in conflicting_features:
+			for item in row[2]:
+				rowOutput = [row[0],row[1],item[0],item[1],item[2],item[3],item[4]]
+				writer.writerow(rowOutput)
+				
+if results_table_name:
+	message("Writing output to ArcGIS table {} in geodatabase {}".format(results_table_name, results_geodatabase))
+	arcpy.CreateTable_management(geodatabase,outputFile)
+	for field in fields:
+		arcpy.AddField_management(outputFile, field, "TEXT")
+	fullTablePath = results_geodatabase + "\\" + results_table_name
+	with arcpy.da.InsertCursor(fullTablePath, fields) as cursor:
+		for row in conflicting_features:
+			for item in row[2]:
+				rowOutput = [row[0],row[1],item[0],item[1],item[2],item[3],item[4]]
+				cursor.insertRow(rowOutput)
