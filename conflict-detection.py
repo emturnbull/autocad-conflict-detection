@@ -1,24 +1,24 @@
 # -*- coding: utf-8 -*-
 
 """
-	Detects conflicts between features based on a threshold table.
-	
-	Inputs:
-	1. TBD
-	
-	Outputs:
-	1. A table of conflicts.
-	
-	Authors:   	Alan Armstrong
-				Zoltan Kalnay
-				Whitney Pala
-				Hassan Saleem
-				Chris Sinclair
-				Erin Turnbull
-				
-	Created:	Feb 22, 2019
-	Modified:	Feb 26, 2019
-			   
+    Detects conflicts between features based on a threshold table.
+    
+    Inputs:
+    1. TBD
+    
+    Outputs:
+    1. A table of conflicts.
+    
+    Authors:       Alan Armstrong
+                Zoltan Kalnay
+                Whitney Pala
+                Hassan Saleem
+                Chris Sinclair
+                Erin Turnbull
+                
+    Created:    Feb 22, 2019
+    Modified:    Feb 26, 2019
+               
 """
 import arcpy
 import sys
@@ -100,7 +100,7 @@ if testing:
     results_feature_class = 'Conflicting_Features'
 else:
     geodatabase = sys.argv[1]
-	results_geodatabase = sys.argv[2]
+    results_geodatabase = sys.argv[2]
     dataset = os.path.basename(sys.argv[5])
     threshold_table = sys.argv[10]
     layer_field = sys.argv[6]
@@ -113,8 +113,8 @@ else:
     threshold_units = sys.argv[13]
     conflict_feature_class = sys.argv[3]
     conflict_feature_layer = sys.argv[4]
-	results_featureset = sys.argv[16]
-	results_csv_file = sys.argv[17]
+    results_featureset = sys.argv[16]
+    results_csv_file = sys.argv[17]
     use_all_features = sys.argv[19]
     find_all_conflicts = sys.argv[18]
     results_table_name =sys.argv[15]
@@ -197,32 +197,32 @@ with arcpy.da.SearchCursor(conflict_feature_class, ['OBJECTID', 'SHAPE@', entity
 message(conflicting_features)
 arcpy.env.overwriteOutput = True
 fields = [
-	'Interest_OID', 
-	'Interest_Handle',
+    'Interest_OID', 
+    'Interest_Handle',
     'Conflict_Class',
-	'Conflict_OID',
-	'Conflict_Handle',
-	'Conflict_Layer',
-	'Conflict_Distance'
+    'Conflict_OID',
+    'Conflict_Handle',
+    'Conflict_Layer',
+    'Conflict_Distance'
 ]
 if results_csv_file:
-	message("Writing output to CSV file {}".format(results_csv_file))
-	with open(results_csv_file, 'w') as outputFile:
-		writer = csv.writer(outputFile, delimiter=',', quotechar='"', quoting=csv.QUOTE_ALL)
-		writer.write(
-		for row in conflicting_features:
-			for item in row[2]:
-				rowOutput = [row[0],row[1],item[0],item[1],item[2],item[3],item[4]]
-				writer.writerow(rowOutput)
-				
+    message("Writing output to CSV file {}".format(results_csv_file))
+    with open(results_csv_file, 'w') as outputFile:
+        writer = csv.writer(outputFile, delimiter=',', quotechar='"', quoting=csv.QUOTE_ALL)
+        writer.writerow(fields)
+        for row in conflicting_features:
+            for item in row[2]:
+                rowOutput = [row[0],row[1],item[0],item[1],item[2],item[3],item[4]]
+                writer.writerow(rowOutput)
+                
 if results_table_name:
-	message("Writing output to ArcGIS table {} in geodatabase {}".format(results_table_name, results_geodatabase))
-	arcpy.CreateTable_management(geodatabase,outputFile)
-	for field in fields:
-		arcpy.AddField_management(outputFile, field, "TEXT")
-	fullTablePath = results_geodatabase + "\\" + results_table_name
-	with arcpy.da.InsertCursor(fullTablePath, fields) as cursor:
-		for row in conflicting_features:
-			for item in row[2]:
-				rowOutput = [row[0],row[1],item[0],item[1],item[2],item[3],item[4]]
-				cursor.insertRow(rowOutput)
+    message("Writing output to ArcGIS table {} in geodatabase {}".format(results_table_name, results_geodatabase))
+    arcpy.CreateTable_management(results_geodatabase, results_table_name)
+    fullTablePath = results_geodatabase + "\\" + results_table_name
+    for field in fields:
+        arcpy.AddField_management(fullTablePath, field, "TEXT")
+    with arcpy.da.InsertCursor(fullTablePath, fields) as cursor:
+        for row in conflicting_features:
+            for item in row[2]:
+                rowOutput = [row[0],row[1],item[0],item[1],item[2],item[3],item[4]]
+                cursor.insertRow(rowOutput)
