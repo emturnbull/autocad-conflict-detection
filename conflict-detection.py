@@ -74,6 +74,58 @@ def convert(units, from_unit, to_unit = 'm'):
         conversion_factor /= X_TO_METERS[to_unit]
     return units * conversion_factor
 
+def createOutput(conflicting_features):
+    output_table = "Conflicts"
+    output_location = geodatabase + "\\" + output_table
+    arcpy.CreateTable_management(geodatabase,output_table)
+    fields = ['RLine_OID','RLine_Handle','FClass','OID','Con_Handle',
+              'Con_Type','Distance_m']
+    output_shapes = {}
+    for shape in RELEVANT_SHAPE_TYPES:
+        output_shape = 'conflicting' + shape
+        template = arcpy.ListFeatureClasses(feature_type = shape.capitalize(),
+                                            feature_dataset = dataset)[0]
+        output_shapes[shape] = arcpy.CreateFeatureclass_management(geodatabase,
+                     output_shape, shape.capitalize(), template)
+    for field in fields:
+        arcpy.AddField_management(output_table, field, "TEXT")
+    outputFile = open(geodatabase +'\\output.csv',"w")
+    writer = csv.writer(outputFile, delimiter=',', quotechar='"',
+                        quoting=csv.QUOTE_ALL)
+    writer.writerow(fields)
+    with arcpy.da.InsertCursor(output_location, fields) as cursor:
+        for row in conflicting_features:
+            for item in row[2]:
+                rowOutput = [row[0], row[1], item[0], item[1], item[2],
+                             item[3], item[4]]
+                cursor.insertRow(rowOutput)
+                writer.writerow(rowOutput)
+    outputFile.close()
+    del cursor
+    found = set()
+    for row in conflicting_features:
+        for item in row[2]:
+            found.add(item[1])
+    oid_list = ""
+    for feature in found:
+        oid_list += ", " + format(feature)
+    oid_list = oid_list[2:]
+    whereclause = 'OBJECTID in (' + oid_list + ')'
+    for shape_type in RELEVANT_SHAPE_TYPES:
+            bs = shape_type.capitalize()
+            feature_classes = arcpy.ListFeatureClasses(feature_type=bs,
+                                                       feature_dataset=dataset)
+            for feature_class in feature_classes:
+                template = arcpy.ListFeatureClasses(feature_type=bs,
+                                                    feature_dataset=dataset)[0]
+                temp_layer = arcpy.MakeFeatureLayer_management(template,
+                                                               "in_memory")
+                arcpy.SelectLayerByAttribute_management(temp_layer,
+                                                        "NEW_SELECTION",
+                                                        whereclause)
+                arcpy.CopyFeatures_management(temp_layer,
+                                              output_shapes[shape_type])
+
 message("Calling file {0}...".format(sys.argv[0]))
 
 testing = False
@@ -113,7 +165,7 @@ else:
     threshold_units = sys.argv[13]
     conflict_feature_class = sys.argv[3]
     conflict_feature_layer = sys.argv[4]
-    results_featureset = sys.argv[16]
+    results_featureset = os.path.basename(sys.argv[16])
     results_csv_file = sys.argv[17]
     use_all_features = sys.argv[19]
     find_all_conflicts = sys.argv[18]
@@ -194,7 +246,6 @@ with arcpy.da.SearchCursor(conflict_feature_class, ['OBJECTID', 'SHAPE@', entity
         else:
             message("No conflicts found")
             
-message(conflicting_features)
 arcpy.env.overwriteOutput = True
 fields = [
     'Interest_OID', 
@@ -205,7 +256,7 @@ fields = [
     'Conflict_Layer',
     'Conflict_Distance'
 ]
-if results_csv_file:
+if results_csv_file and not(results_csv_file == '#'):
     message("Writing output to CSV file {}".format(results_csv_file))
     with open(results_csv_file, 'w') as outputFile:
         writer = csv.writer(outputFile, delimiter=',', quotechar='"', quoting=csv.QUOTE_ALL, lineterminator='\n')
@@ -215,7 +266,7 @@ if results_csv_file:
                 rowOutput = [row[0],row[1],item[0],item[1],item[2],item[3],item[4]]
                 writer.writerow(rowOutput)
                 
-if results_table_name:
+if results_table_name and not(results_table_name == '#'):
     message("Writing output to ArcGIS table {} in geodatabase {}".format(results_table_name, results_geodatabase))
     arcpy.CreateTable_management(results_geodatabase, results_table_name)
     fullTablePath = results_geodatabase + "\\" + results_table_name
@@ -226,3 +277,27 @@ if results_table_name:
             for item in row[2]:
                 rowOutput = [row[0],row[1],item[0],item[1],item[2],item[3],item[4]]
                 cursor.insertRow(rowOutput)
+                
+if results_featureset and not(results_featureset == '#'):
+    message("Writing output to ArcGIS feature set {} in geodatabase {}".format(results_featureset, results_geodatabase))
+    found = set()
+    for row in conflicting_features:
+        for item in row[2]:
+            found.add(str(item[1]))
+    whereclause = 'OBJECTID in (' + ", ".join(found) + ')'
+    for shape_type in RELEVANT_SHAPE_TYPES:
+        bs = shape_type.capitalize()
+        feature_classes = arcpy.ListFeatureClasses(feature_type=bs,
+                                                       feature_dataset=dataset)
+        for feature_class in feature_classes:
+            output_fc_name = results_featureset + "\\" + feature_class + "_Conflicts"
+            message("Creating FC {} in database {} based on {}".format(output_fc_name, results_geodatabase, feature_class))
+            output_fc = arcpy.CreateFeatureclass_management(results_geodatabase,
+                     output_fc_name, shape_type.capitalize(), feature_class)
+            temp_layer = arcpy.MakeFeatureLayer_management(feature_class,
+                                                               "in_memory")
+            arcpy.SelectLayerByAttribute_management(temp_layer,
+                                                        "NEW_SELECTION",
+                                                        whereclause)
+            arcpy.CopyFeatures_management(temp_layer,
+                                              output_fc)
