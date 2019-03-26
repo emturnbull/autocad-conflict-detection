@@ -8,7 +8,12 @@
     2. geodatabse where results are to go
     3. dataset to use
     4. table of threshold values
-    5.
+    5. table of threshold values
+    6. feature dataset containing all cad features
+    7. Threshold table
+    8. Results table location (optional)
+    9. Results featureset name (optional)
+    10.CSV table location (optional)
 
     Outputs:
     1. CSV table of conflicts (optional)
